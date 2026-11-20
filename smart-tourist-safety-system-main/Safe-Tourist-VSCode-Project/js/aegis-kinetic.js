@@ -35,13 +35,14 @@
   };
 
   const LENS_META = {
-    heat: { label: 'ML RISK', title: 'ML Risk Heatmap', chip: 'ML RISK', angle: 0 },
-    path: { label: 'ISO PATH', title: 'Isolation Forest Path', chip: 'ISO PATH', angle: 72 },
-    havens: { label: 'HAVENS', title: 'All-India Safe Havens', chip: 'HAVENS', angle: 144 },
-    night: { label: 'NIGHT', title: 'Night-Time Danger Shift', chip: 'NIGHT SHIFT', angle: 216 },
-    ledger: { label: 'LEDGER', title: 'Blockchain Ledger', chip: 'LEDGER', angle: 288 }
+    zones:  { label: 'INDIA',  title: 'All-India Zone Atlas',   chip: 'ALL INDIA ZONES', angle: 0 },
+    heat:   { label: 'RISK',   title: 'ML Risk Field',          chip: 'ML RISK FIELD',   angle: 72 },
+    path:   { label: 'FOREST', title: 'Isolation Forest Path',  chip: 'ISOLATION FOREST', angle: 144 },
+    havens: { label: 'HAVENS', title: 'Safe Havens',            chip: 'SAFE HAVENS',     angle: 216 },
+    night:  { label: 'NIGHT',  title: 'Night Shift',            chip: 'NIGHT SHIFT',     angle: 288 },
+    ledger: { label: 'LEDGER', title: 'Blockchain Ledger',      chip: 'LEDGER',          angle: 0 }
   };
-  const LENS_ORDER = ['heat', 'path', 'havens', 'night', 'ledger'];
+  const LENS_ORDER = ['zones', 'heat', 'path', 'havens', 'night'];
 
   /* --------------------------------------------------------------- helpers */
   function ml() { return (typeof MLRisk !== 'undefined') ? MLRisk : null; }
@@ -68,6 +69,7 @@
      ========================================================================== */
   function applyLite(on, silent) {
     KIN.lite = !!on;
+    if (window.Aegis) window.Aegis.lite = KIN.lite;
     document.body.classList.toggle('lite', KIN.lite);
     const btn = $id('liteToggle');
     if (btn) {
@@ -75,6 +77,7 @@
       btn.textContent = KIN.lite ? '◉ Lite' : '◌ Lite';
     }
     if (typeof AEG !== 'undefined' && AEG.prefs) { AEG.prefs.lite = KIN.lite; saveState(); }
+    if (KIN.lite && typeof KIN.trailReset === 'function') KIN.trailReset();
     if (!silent && typeof toast === 'function') toast(KIN.lite ? 'Lite Mode on — particles and glow suspended' : 'Lite Mode off — full kinetic rendering', 'info');
     announce(KIN.lite ? 'Lite mode enabled' : 'Lite mode disabled');
   }
@@ -91,7 +94,11 @@
     let w = 0, h = 0;
     const parts = [];
     const halo = $id('fxHalo');
-    let last = 0;
+    let last = 0, lastPaint = 0, trailUnsub = null, haloQueued = false;
+    let hx = 0, hy = 0;
+    const FRAME_MS = 1000 / 30;   // decorative trail: 30 fps is indistinguishable
+    const SPAWN_MS = 24;          // ≤ ~42 particles per second
+    const MAX_PARTS = 90;
 
     function resize() {
       w = canvas.width = Math.floor(window.innerWidth * dpr);
@@ -103,37 +110,28 @@
     resize();
     window.addEventListener('resize', resize, { passive: true });
 
-    window.addEventListener('pointermove', (ev) => {
-      if (KIN.lite) return;
-      const now = performance.now();
-      if (halo) {
-        halo.style.opacity = '1';
-        halo.style.transform = 'translate(' + ev.clientX + 'px,' + ev.clientY + 'px)';
-      }
-      if (now - last < 14) return;
-      last = now;
-      for (let i = 0; i < 2; i++) {
-        parts.push({
-          x: ev.clientX, y: ev.clientY,
-          vx: (Math.random() - 0.5) * 0.9,
-          vy: (Math.random() - 0.5) * 0.9 - 0.15,
-          life: 1, r: 0.8 + Math.random() * 1.6,
-          hue: Math.random() < 0.18 ? '#FFB020' : '#00F0FF'
-        });
-      }
-      if (parts.length > 220) parts.splice(0, parts.length - 220);
-    }, { passive: true });
+    function flushHalo() {
+      haloQueued = false;
+      if (!halo || KIN.lite) return;
+      halo.style.opacity = '1';
+      halo.style.transform = 'translate(' + hx + 'px,' + hy + 'px)';
+    }
 
-    window.addEventListener('pointerleave', () => { if (halo) halo.style.opacity = '0'; });
-
-    (function frame() {
-      requestAnimationFrame(frame);
-      if (KIN.lite) { if (parts.length) parts.length = 0; ctx.clearRect(0, 0, w / dpr, h / dpr); return; }
+    // Runs on the shared Aegis ticker and only while particles exist.
+    function step(dt, ts) {
+      if (KIN.lite || !parts.length) {
+        parts.length = 0;
+        ctx.clearRect(0, 0, w / dpr, h / dpr);
+        if (trailUnsub) { trailUnsub(); trailUnsub = null; }
+        return;
+      }
+      if (ts - lastPaint < FRAME_MS) return;
+      lastPaint = ts;
       ctx.clearRect(0, 0, w / dpr, h / dpr);
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         p.x += p.vx; p.y += p.vy; p.vy += 0.012;
-        p.life -= 0.026;
+        p.life -= 0.03;
         if (p.life <= 0) { parts.splice(i, 1); continue; }
         ctx.globalAlpha = Math.max(0, p.life) * 0.55;
         ctx.fillStyle = p.hue;
@@ -145,7 +143,45 @@
       }
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
-    })();
+    }
+
+    function kick() {
+      if (KIN.lite || document.hidden) return;
+      const ticker = window.Aegis && window.Aegis.ticker;
+      if (!ticker || trailUnsub) return;
+      trailUnsub = ticker.add(step);
+    }
+
+    KIN.trailReset = function () {
+      parts.length = 0;
+      if (trailUnsub) { trailUnsub(); trailUnsub = null; }
+      ctx.clearRect(0, 0, w / dpr, h / dpr);
+    };
+
+    window.addEventListener('pointermove', (ev) => {
+      if (KIN.lite) return;
+      hx = ev.clientX; hy = ev.clientY;
+      if (halo && !haloQueued) { haloQueued = true; requestAnimationFrame(flushHalo); }
+      const now = performance.now();
+      if (now - last < SPAWN_MS) return;
+      last = now;
+      parts.push({
+        x: hx, y: hy,
+        vx: (Math.random() - 0.5) * 0.9,
+        vy: (Math.random() - 0.5) * 0.9 - 0.15,
+        life: 1, r: 0.8 + Math.random() * 1.6,
+        hue: Math.random() < 0.18 ? '#FFB020' : '#00F0FF'
+      });
+      if (parts.length > MAX_PARTS) parts.splice(0, parts.length - MAX_PARTS);
+      kick();
+    }, { passive: true });
+
+    window.addEventListener('pointerleave', () => { if (halo) halo.style.opacity = '0'; });
+
+    // Never burn frames in a hidden tab.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) KIN.trailReset();
+    });
   }
 
   function initMagnetic() {
@@ -162,14 +198,23 @@
   /* ==========================================================================
      2. ROTARY INTELLIGENCE LENS
      ========================================================================== */
+  function applyArm(deg, animate) {
+    const arm = $id('dialArm');
+    if (!arm) return;
+    arm.classList.toggle('is-dragging', !animate);
+    arm.style.setProperty('--angle', deg + 'deg');
+  }
+
   function paintDial() {
     const meta = LENS_META[KIN.lens] || LENS_META.heat;
     document.querySelectorAll('.dial-stop').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-lens') === KIN.lens);
       b.setAttribute('aria-pressed', b.getAttribute('data-lens') === KIN.lens ? 'true' : 'false');
     });
-    const arm = $id('dialArm');
-    if (arm) arm.style.setProperty('--angle', meta.angle + 'deg');
+    KIN.angle = meta.angle;
+    applyArm(meta.angle, true);
+    const faceEl = document.querySelector('.dial-face');
+    if (faceEl) faceEl.style.setProperty('--angle', meta.angle + 'deg');
     const label = $id('dialLabel');
     if (label) label.textContent = meta.label;
     const chip = $id('lensChip');
@@ -180,35 +225,66 @@
 
   function bindDial() {
     const face = document.querySelector('.dial-face');
-    if (!face || KIN.dialBound) return;
-    KIN.dialBound = true;
-    let dragging = false;
+    // Guard per node, not per session: every page render replaces the dial, and
+    // a session-wide flag left the fresh node without drag or arrow-key support.
+    if (!face || face.dataset.dialBound) return;
+    face.dataset.dialBound = '1';
+    let dragging = false, lastAngle = 0, lastTime = 0, velocity = 0;
 
-    function nearest(ev) {
-      const stops = Array.prototype.slice.call(document.querySelectorAll('.dial-stop'));
-      let best = null, bd = Infinity;
-      stops.forEach(s => {
-        const r = s.getBoundingClientRect();
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
-        if (d < bd) { bd = d; best = s; }
-      });
-      return best;
+    function angleAt(ev) {
+      const r = face.getBoundingClientRect();
+      return Math.atan2(ev.clientX - (r.left + r.width / 2), -(ev.clientY - (r.top + r.height / 2))) * 180 / Math.PI;
     }
+
     face.addEventListener('pointerdown', (ev) => {
       if (ev.target.closest('.dial-stop')) return;
       dragging = true;
+      face.classList.add('is-dragging');
+      lastAngle = angleAt(ev);
+      lastTime = performance.now();
+      velocity = 0;
       try { face.setPointerCapture(ev.pointerId); } catch (e) {}
     });
+
+    // Inertial instrument: the arm follows the pointer continuously, then the
+    // release velocity projects forward and snaps to the nearest 72° detent.
     face.addEventListener('pointermove', (ev) => {
       if (!dragging) return;
-      const s = nearest(ev);
-      if (s && s.getAttribute('data-lens') !== KIN.lens) aegisSetLens(s.getAttribute('data-lens'));
+      const a = angleAt(ev);
+      let delta = a - lastAngle;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      const now = performance.now();
+      const span = Math.max(8, now - lastTime);
+      velocity = (delta / span) * 1000;
+      KIN.angle = (KIN.angle || 0) + delta;
+      lastAngle = a;
+      lastTime = now;
+      applyArm(KIN.angle, false);
+      face.style.setProperty('--angle', KIN.angle + 'deg');
     });
-    face.addEventListener('pointerup', () => { dragging = false; });
-    face.addEventListener('pointercancel', () => { dragging = false; });
 
-    const dial = $id('lensDial');
+    function release() {
+      if (!dragging) return;
+      dragging = false;
+      face.classList.remove('is-dragging');
+      // a flick may travel at most 2.5 detents, so the instrument never spins
+      const fling = Math.max(-180, Math.min(180, velocity * 0.09));
+      const projected = (KIN.angle || 0) + fling;
+      const snapped = Math.round(projected / 72) * 72;
+      KIN.angle = snapped;
+      applyArm(snapped, true);
+      face.style.setProperty('--angle', snapped + 'deg');
+      const idx = ((Math.round(snapped / 72) % LENS_ORDER.length) + LENS_ORDER.length) % LENS_ORDER.length;
+      const key = LENS_ORDER[idx];
+      if (key !== KIN.lens) aegisSetLens(key);
+      else paintDial();
+      velocity = 0;
+    }
+    face.addEventListener('pointerup', release);
+    face.addEventListener('pointercancel', release);
+
+    const dial = face.closest('.lens-dial');
     if (dial) {
       dial.addEventListener('keydown', (ev) => {
         if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
@@ -261,7 +337,18 @@
     const bounds = CMAP.m.getBounds();
     const center = [p.lat, p.lng];
 
-    if (KIN.lens === 'heat' || KIN.lens === 'night') {
+    if (KIN.lens === 'zones') {
+      const regions = engine.regions || [];
+      regions.forEach(r => {
+        if (!r.capital) return;
+        const c = engine.classifyAt(r.capital[0], r.capital[1], { hour: KIN.night ? 1 : new Date().getHours() });
+        L.circle([r.capital[0], r.capital[1]], {
+          radius: 42000, stroke: colorFor(c.score), weight: 1, opacity: .5,
+          dashArray: '3 5', fillColor: colorFor(c.score), fillOpacity: .1
+        }).addTo(group).bindTooltip('<b>' + txt(r.name) + '</b><br/>' + txt(c.label) + ' · ' + c.score + '/100 · ' + c.confidence + '% conf', { direction: 'top' });
+      });
+      if (!quiet) toast(regions.length + ' states and UTs scored for the atlas', 'info');
+    } else if (KIN.lens === 'heat' || KIN.lens === 'night') {
       const isNight = KIN.lens === 'night';
       const step = Math.max((bounds.getNorth() - bounds.getSouth()) / 9, (bounds.getEast() - bounds.getWest()) / 9, 0.004);
       const cells = [];
@@ -390,6 +477,24 @@
     saveState();
     paintIntel();
     if (typeof aegisPaintLive === 'function') aegisPaintLive();
+    // shared-element style focus on the telemetry card that now describes this place
+    const card = $id('zoneIntel');
+    if (card) {
+      card.classList.remove('is-focus');
+      void card.offsetWidth;
+      card.classList.add('is-focus');
+      setTimeout(() => card.classList.remove('is-focus'), 1200);
+    }
+  };
+
+  window.aegisSimPane = function (pane) {
+    const dock = $id('simDock');
+    if (!dock) return;
+    const p = pane === 'cine' ? 'cine' : 'sim';
+    KIN.pane = p;
+    dock.dataset.pane = p;
+    dock.querySelectorAll('.sim-tab').forEach(b => b.classList.toggle('active', b.dataset.pane === p));
+    if (window.Aegis && Aegis.map) Aegis.map.refresh(320);
   };
 
   /* ==========================================================================
@@ -456,17 +561,24 @@
     const isoEl = $id('sparkIso');
     if (isoEl) isoEl.textContent = (iso.score > 0 ? '+' : '') + iso.score.toFixed(2);
 
-    if (c) KIN.hist.push(c.score);
-    KIN.isoHist.push(Math.round((iso.score + 1) * 50));
-    if (KIN.hist.length > 46) KIN.hist.shift();
-    if (KIN.isoHist.length > 46) KIN.isoHist.shift();
-
-    const rp = sparkPath(KIN.hist, 0, 100);
-    const ip = sparkPath(KIN.isoHist, 0, 100);
+        // Sparkline sampling + repaint are throttled: one sample per second and no
+    // DOM write when the geometry has not changed.
     const risk = $id('riskSpark'), area = $id('riskSparkArea'), isoS = $id('isoSpark');
-    if (risk) risk.setAttribute('d', rp.line);
-    if (area) area.setAttribute('d', rp.area);
-    if (isoS) isoS.setAttribute('d', ip.line);
+    if (c && risk) {
+      const now = performance.now();
+      if (now - (KIN.lastSample || 0) >= 1000) {
+        KIN.lastSample = now;
+        KIN.hist.push(c.score);
+        KIN.isoHist.push(Math.round((iso.score + 1) * 50));
+        if (KIN.hist.length > 46) KIN.hist.shift();
+        if (KIN.isoHist.length > 46) KIN.isoHist.shift();
+        const rp = sparkPath(KIN.hist, 0, 100);
+        const ip = sparkPath(KIN.isoHist, 0, 100);
+        if (risk.getAttribute('d') !== rp.line) risk.setAttribute('d', rp.line);
+        if (area && area.getAttribute('d') !== rp.area) area.setAttribute('d', rp.area);
+        if (isoS && isoS.getAttribute('d') !== ip.line) isoS.setAttribute('d', ip.line);
+      }
+    }
 
     const nightBtn = $id('dayNightBtn');
     if (nightBtn) {
@@ -594,7 +706,7 @@
      7. DEMO TELEMETRY ENGINE (no Supabase required)
      ========================================================================== */
   function tickDemo() {
-    if (!document.body || document.body.classList.contains('hidden')) return;
+    if (!document.body || document.body.classList.contains('hidden') || document.hidden) return;
     try { paintIntel(); } catch (e) {}
     if (typeof AEG !== 'undefined' && AEG.fleet && AEG.fleet.length && S.role === 'authority') {
       AEG.fleet.forEach(f => {
@@ -627,6 +739,9 @@
     } else if (compactApplied) {
       compactApplied = false;
       root.classList.remove('no-left', 'no-right');
+      // Clear the per-node marker too: without this, shrinking the window from
+      // desktop to tablet skips the close pass and both overlays cover the map.
+      root.dataset.kinCompact = '';
     }
   }
   window.addEventListener('resize', () => { syncViewport(); }, { passive: true });
@@ -668,7 +783,8 @@
     initMagnetic();
     initTrail();
     paintDial();
-    setInterval(tickDemo, 1200);
+    setInterval(tickDemo, 1500);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { try { paintIntel(); } catch (e) {} } });
     paintIntel();
   }
 

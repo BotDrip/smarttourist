@@ -207,25 +207,31 @@ function aegisCommandPage() {
           '<span class="legend-item"><i class="legend-dot" style="background:#FF2A5F;color:#FF2A5F"></i>Restricted</span>' +
           '<span class="legend-item"><i class="legend-dot" style="background:#00F0FF;color:#00F0FF"></i>Telemetry</span>' +
         '</div>' +
-        '<div class="map-btns" style="top:72px"><button onclick="aegisMapZoom(1)" title="Zoom in">+</button><button onclick="aegisMapZoom(-1)" title="Zoom out">−</button><button onclick="aegisCenterMap()" title="Recenter">⌖</button></div>' +
+        '<div class="map-btns map-rails"><button onclick="aegisMapZoom(1)" title="Zoom in">+</button><button onclick="aegisMapZoom(-1)" title="Zoom out">−</button><button onclick="aegisCenterMap()" title="Recenter">⌖</button></div>' +
         '<button class="fab fab-left" onclick="aegisToggleDrawer(\'left\')" title="Show telemetry drawer" aria-label="Show telemetry drawer">›</button>' +
         '<button class="fab fab-right" onclick="aegisToggleDrawer(\'right\')" title="Show intelligence drawer" aria-label="Show intelligence drawer">‹</button>' +
         '<div class="map-search-wrap">' +
           '<input id="indiaSearch" class="map-search" type="search" placeholder="Search anywhere in India — Leh, Manali, Goa…" autocomplete="off" oninput="aegisIndiaSearch(this.value)" onkeydown="aegisIndiaKey(event)" aria-label="Search any Indian location"/>' +
           '<div class="map-results" id="indiaResults" hidden></div>' +
         '</div>' +
-        '<div class="lens-dial" id="lensDial" data-lens="heat" role="group" aria-label="Intelligence lens switcher">' +
+        '<div class="lens-dial" id="lensDial" data-lens="heat" role="group" tabindex="0" aria-label="Intelligence lens switcher — use arrow keys">' +
           '<div class="dial-face">' +
-            '<button class="dial-stop s0" data-lens="heat" onclick="aegisSetLens(\'heat\')" title="ML risk heatmap">HEAT</button>' +
-            '<button class="dial-stop s1" data-lens="path" onclick="aegisSetLens(\'path\')" title="Isolation Forest path">PATH</button>' +
-            '<button class="dial-stop s2" data-lens="havens" onclick="aegisSetLens(\'havens\')" title="All-India safe havens">HAVEN</button>' +
-            '<button class="dial-stop s3" data-lens="night" onclick="aegisSetLens(\'night\')" title="Night-time danger shift">NIGHT</button>' +
-            '<button class="dial-stop s4" data-lens="ledger" onclick="aegisSetLens(\'ledger\')" title="Blockchain ledger">LEDGER</button>' +
-            '<div class="dial-hub" id="dialHub"><i class="dial-arm" id="dialArm"></i><span id="dialLabel">ML RISK</span></div>' +
+            '<span class="dial-ticks" aria-hidden="true"></span>' +
+            '<span class="dial-glow" aria-hidden="true"></span>' +
+            '<button class="dial-stop s0" data-lens="zones" onclick="aegisSetLens(\'zones\')" title="ALL INDIA ZONES — state and UT atlas">ZONES</button>' +
+            '<button class="dial-stop s1" data-lens="heat" onclick="aegisSetLens(\'heat\')" title="ML RISK FIELD — spatial risk classification">RISK</button>' +
+            '<button class="dial-stop s2" data-lens="path" onclick="aegisSetLens(\'path\')" title="ISOLATION FOREST — trajectory anomaly">FOREST</button>' +
+            '<button class="dial-stop s3" data-lens="havens" onclick="aegisSetLens(\'havens\')" title="SAFE HAVENS — verified response points">HAVEN</button>' +
+            '<button class="dial-stop s4" data-lens="night" onclick="aegisSetLens(\'night\')" title="NIGHT SHIFT — danger recomputed after dark">NIGHT</button>' +
+            '<div class="dial-hub" id="dialHub"><span id="dialLabel">ML RISK</span></div>' +
+            '<i class="dial-arm" id="dialArm" aria-hidden="true"></i>' +
           '</div>' +
         '</div>' +
-        '<div class="simdock" id="simDock">' +
+        '<div class="simdock" id="simDock" data-pane="sim">' +
           '<div class="simdock-top"><span class="sim-label"><i class="live-dot' + (mode || replay ? '' : ' off') + '" id="simDot"></i> STRESS-TEST SIMULATOR</span>' +
+            '<div class="sim-tabs" role="tablist" aria-label="Simulator panes">' +
+              '<button class="sim-tab active" data-pane="sim" role="tab" onclick="aegisSimPane(\'sim\')">SIMULATE</button>' +
+              '<button class="sim-tab" data-pane="cine" role="tab" onclick="aegisSimPane(\'cine\')">SCENES</button></div>' +
             '<div class="hstack" style="gap:6px">' +
               '<button class="chip chip-btn" id="dayNightBtn" onclick="aegisToggleDayNight()" title="Recompute ML priors for day / night">☀ DAY</button>' +
               '<span class="chip" id="simState">' + (replay ? 'REPLAY' : aegisScenarioLabel(mode)) + '</span></div></div>' +
@@ -252,6 +258,18 @@ function aegisCommandPage() {
             '<span class="tl" style="text-align:right" id="replayIdx">' + (replay ? (AEG.sim.replay.index + 1) : 0) + '/' + AEG.trail.length + '</span>' +
             '<button class="speed-btn ' + (AEG.sim.replay.speed === 1 ? 'on' : '') + '" onclick="aegisReplaySetSpeed(1)">1x</button>' +
             '<button class="speed-btn ' + (AEG.sim.replay.speed === 2 ? 'on' : '') + '" onclick="aegisReplaySetSpeed(2)">2x</button>' +
+          '</div>' +
+          '<div class="cine-deck">' +
+            '<div class="cine-head"><span class="cine-kicker">GUIDED SCENARIOS</span><span id="cineHead" class="cine-now">01 · Mumbai Coastal Transit</span></div>' +
+            '<div class="cine-scenes">' +
+              '<button class="cine-scene" data-scene="1"><i>01</i> Mumbai coastal</button>' +
+              '<button class="cine-scene" data-scene="2"><i>02</i> Night drift</button>' +
+              '<button class="cine-scene" data-scene="3"><i>03</i> Pulse null</button>' +
+            '</div>' +
+            '<div class="cine-line"><span class="cine-clock" id="cineClock">00:00</span>' +
+              '<div class="cine-track"><span class="cine-fill" id="cineFill"></span>' +
+                '<input class="cine-scrub" id="cineScrub" type="range" min="0" max="1000" value="0" aria-label="Scene timeline scrubber"/></div></div>' +
+            '<div class="cine-beat" id="cineBeat">Pick a scenario — markers glide the Bezier route, the model rescoring live, then the ledger seals.</div>' +
           '</div>' +
         '</div>' +
       '</div></section>' +
