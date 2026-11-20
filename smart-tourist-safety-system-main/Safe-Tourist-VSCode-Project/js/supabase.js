@@ -11,6 +11,14 @@ const SUPABASE_CONFIG = {
 
 let sbClient = null;
 let isCloudConnected = false;
+// Sticky capability flag: once the ledger table is reported missing we stop
+// re-requesting it, so a deployment without migration_v3.sql stays quiet.
+let sbAegisLedgerReady = true;
+function sbLedgerMissing(err) {
+  if (!err) return false;
+  const msg = String(err.message || err.details || err.hint || '');
+  return err.code === '42P01' || err.status === 404 || /does not exist|schema cache|not find the table/i.test(msg);
+}
 
 function initSupabase() {
   if (window.supabase && SUPABASE_CONFIG.URL && SUPABASE_CONFIG.KEY) {
@@ -452,7 +460,7 @@ function sbAegisQueue(action, payload) {
 }
 
 async function sbAegisLedgerInsert(entry, enqueue = true) {
-  if (!sbClient || !isCloudConnected) {
+  if (!sbClient || !isCloudConnected || !sbAegisLedgerReady) {
     if (enqueue) sbAegisQueue('aegisLedger', entry);
     return null;
   }
@@ -471,6 +479,7 @@ async function sbAegisLedgerInsert(entry, enqueue = true) {
     if (error) throw error;
     return data;
   } catch (err) {
+    if (sbLedgerMissing(err)) sbAegisLedgerReady = false;
     console.warn('aegis_ledger write skipped (run migration_v3.sql):', err && err.message);
     if (enqueue) sbAegisQueue('aegisLedger', entry);
     return null;
@@ -648,7 +657,7 @@ async function sbAegisFetchAlerts() {
 }
 
 async function sbAegisFetchLedger(limit = 40) {
-  if (!sbClient) return null;
+  if (!sbClient || !sbAegisLedgerReady) return null;
   try {
     const { data, error } = await sbClient
       .from('aegis_ledger')
@@ -666,6 +675,7 @@ async function sbAegisFetchLedger(limit = 40) {
       ts: e.occurred_at
     }));
   } catch (err) {
+    if (sbLedgerMissing(err)) sbAegisLedgerReady = false;
     console.warn('aegis_ledger read skipped:', err && err.message);
     return null;
   }

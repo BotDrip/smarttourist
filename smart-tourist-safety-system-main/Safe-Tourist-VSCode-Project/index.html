@@ -11,13 +11,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
 <link href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" rel="stylesheet"/>
-<link href="css/style.css?v=7.8" rel="stylesheet"/>
+<link href="css/style.css?v=8.0.0" rel="stylesheet"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
+<!-- Living ambient field (contours + radar waves) -->
+<canvas id="fxAmbient" aria-hidden="true"></canvas>
 <!-- Kinetic particle / glow cursor layer -->
 <canvas id="fxTrail" aria-hidden="true"></canvas>
 <div class="fx-halo" id="fxHalo" aria-hidden="true"></div>
@@ -325,7 +327,7 @@
       <span class="spacer"></span>
       <span id="sbStealth">STEALTH OFF</span>
       <span class="sep"></span>
-      <span>AEGIS v6.0</span>
+      <span>AEGIS v8.0.0</span>
     </footer>
   </main>
 </div>
@@ -380,14 +382,15 @@
 <div class="modal-back hidden" id="modalBack"><div class="modal" id="modal"></div></div>
 <div class="toast hidden" id="toast"></div>
 
-<script src="js/supabase.js?v=7.8"></script>
-<script src="js/mlRiskEngine.js?v=7.8"></script>
-<script src="js/app.js?v=7.8"></script>
-<script src="js/aegis-core.js?v=7.8"></script>
-<script src="js/aegis-sim.js?v=7.8"></script>
-<script src="js/aegis-ui.js?v=7.8"></script>
-<script src="js/aegis-saas.js?v=7.8"></script>
-<script src="js/aegis-kinetic.js?v=7.8"></script>
+<script src="js/supabase.js?v=8.0.0"></script>
+<script src="js/mlRiskEngine.js?v=8.0.0"></script>
+<script src="js/app.js?v=8.0.0"></script>
+<script src="js/aegis-core.js?v=8.0.0"></script>
+<script src="js/aegis-sim.js?v=8.0.0"></script>
+<script src="js/aegis-ui.js?v=8.0.0"></script>
+<script src="js/aegis-saas.js?v=8.0.0"></script>
+<script src="js/aegis-kinetic.js?v=8.0.0"></script>
+<script src="js/aegis-cinema.js?v=8.0.0"></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 </body>
 </html>
