@@ -187,13 +187,20 @@ function render(){
   $('userName').textContent=S.user.name;$('userRole').textContent=S.role==='tourist'?'Tourist':'Authority';
   $('avatar').textContent=S.user.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   $('pageTitle').textContent=titles[S.page]||'Overview';
-  try{$('content').innerHTML=S.role==='tourist'?touristPage():authorityPage()}catch(e){console.error(e);$('content').innerHTML='<div class="notice danger">Something went wrong loading this page.</div>'}
+  try{
+    const custom=(typeof aegisRender==='function')?aegisRender(S.page):null;
+    $('content').innerHTML=custom!=null?custom:(S.role==='tourist'?touristPage():authorityPage());
+    if(custom!=null&&typeof aegisAfterRender==='function')aegisAfterRender(S.page);
+  }catch(e){console.error(e);$('content').innerHTML='<div class="notice danger">Something went wrong loading this page.</div>'}
   cleanupMaps();
+  if(typeof aegisPaintChrome==='function')aegisPaintChrome();
 }
 function enterApp(){
-  S.page='overview';
+  S.page=(typeof aegisDefaultPage==='function')?aegisDefaultPage(S.role):'overview';
   if(S.role==='tourist'){const r=me();S.loc=null;S.zone='Location not acquired';S.safety='UNKNOWN';if(r&&r.locationSource==='gps'&&r.lat!=null){S.loc={lat:Number(r.lat),lng:Number(r.lng),accuracy:r.accuracy||0,updatedAt:r.updatedAt};setSelfZone(r)}}
-  show('app');renderNav();render();
+  show('app');
+  if(typeof aegisBoot==='function')aegisBoot();
+  renderNav();render();
 }
 function setSelfZone(r){S.zone=r.zone||'Outside monitored zones';const z=S.zones.find(x=>x.name===r.zone);S.safety=!z?'SAFE':z.type==='Restricted'?'DANGER':z.type==='Caution'?'CAUTION':'SAFE';if(S.user&&r&&S.user.id===r.id)Object.assign(S.user,r);}
 
@@ -1846,7 +1853,7 @@ function generateVerifyQR(){
 function runVerify(){const id=($('verifyId').value||'').trim().toUpperCase();$('verifyErr').textContent='';S.verified=null;if(!id){$('verifyErr').textContent='Enter a Tourist ID.';return}const f=S.tourists.find(t=>String(t.id).toUpperCase()===id);if(!f){S.verifyId=null;$('verifyErr').textContent='No registered tourist found for this ID.';return}S.verifyId=f.id;render()}
 function stepButtons(a){return `<div class="response-actions"><button class="btn" onclick="updateIncident('Acknowledged')" ${a.status!=='New'?'disabled':''}>Acknowledge</button><button class="btn amber" onclick="updateIncident('Assigned')" ${a.status!=='Acknowledged'?'disabled':''}>Assign response</button><button class="btn green" onclick="updateIncident('Resolved')" ${a.status!=='Assigned'?'disabled':''}>Resolve</button></div>`}
 function activeBox(){const a=S.active;if(!a||a.status==='Resolved')return '<div class="notice" style="margin:12px 0">No active incident selected. Use Manage on an incident, or create one.</div>';return `<div class="card" style="margin:15px 0"><span class="badge danger-b">${esc(a.severity)}</span><h3>${esc(a.id)}</h3><p><b>${esc(a.tourist)}</b> · ${esc(a.type)}</p><p class="muted">${esc(a.zone||'—')} · ${esc(a.status)}${a.assignedTo?' · '+esc(a.assignedTo):''}</p>${stepButtons(a)}</div>`}
-function exportCSV(){const esc2=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv=[['Incident ID','Tourist','Tourist ID','Type','Severity','Status','Zone','Assigned','Lat','Lng','Time'],...S.incidents.map(i=>[i.id,i.tourist,i.touristId||'',i.type,i.severity,i.status,i.zone,i.assignedTo||'',i.lat??'',i.lng??'',i.time||''])].map(r=>r.map(esc2).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='incident-report.csv';document.body.appendChild(a);a.click();a.remove();toast(S.incidents.length+' records exported','success')}
+function exportCSV(){const esc2=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv=[['Incident ID','Tourist','Tourist ID','Type','Severity','Status','Zone','Assigned','Lat','Lng','Time'],...S.incidents.map(i=>[i.id,i.tourist,i.touristId||'',i.type,i.severity,i.status,i.zone,i.assignedTo||'',i.lat??'',i.lng??'',i.time||''])].map(r=>r.map(esc2).join(',')).join('\n');if(typeof aegisDownload==='function'){aegisDownload(new Blob([csv],{type:'text/csv'}),'incident-report.csv')}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='incident-report.csv';document.body.appendChild(a);a.click();a.remove()}toast(S.incidents.length+' records exported','success')}
 
 // ---------- incidents & SOS ----------
 function selectIncident(id){const i=S.incidents.find(x=>x.id===id);if(!i){toast('Incident not found','warning');return}S.active=i;if(!['incidents','response'].includes(S.page)){S.page='response';renderNav()}render()}
