@@ -167,6 +167,18 @@ async function sbProcessSyncQueue() {
         await sbUpsertSafetyZone(item.payload, false);
       } else if (item.action === 'deleteZone') {
         await sbDeleteSafetyZone(item.payload, false);
+      } else if (item.action === 'aegisLedger') {
+        await sbAegisLedgerInsert(item.payload, false);
+      } else if (item.action === 'aegisCheckin') {
+        await sbAegisCheckinInsert(item.payload, false);
+      } else if (item.action === 'aegisTelemetry') {
+        await sbAegisTelemetryInsert(item.payload, false);
+      } else if (item.action === 'aegisAlert') {
+        await sbAegisAlertInsert(item.payload, false);
+      } else if (item.action === 'aegisBroadcast') {
+        await sbAegisBroadcastInsert(item.payload, false);
+      } else if (item.action === 'aegisSubscription') {
+        await sbAegisSubscriptionUpsert(item.payload, false);
       }
       processed++;
     } catch (err) {
@@ -421,5 +433,240 @@ async function updateAreaStatus(areaName, newStatus) {
     console.error("Error saving status update to Supabase:", error.message);
     alert("Failed to save changes to the database. Check your console.");
     return false;
+  }
+}
+// ----------------------------------------------------------------------------
+// AEGIS COMMAND-CENTER PERSISTENCE (MIGRATION V3 — optional, fail-soft)
+// Each helper writes to the Aegis tables when the project has run
+// migration_v3.sql. Missing tables / offline states are queued locally and
+// replayed by sbProcessSyncQueue(); nothing here can break the existing app.
+// ----------------------------------------------------------------------------
+const AEGIS_QUEUE_CAP = 160;
+
+function sbAegisQueue(action, payload) {
+  try {
+    const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+    if (q.length >= AEGIS_QUEUE_CAP) return;
+  } catch (e) {}
+  sbEnqueueSync(action, payload);
+}
+
+async function sbAegisLedgerInsert(entry, enqueue = true) {
+  if (!sbClient || !isCloudConnected) {
+    if (enqueue) sbAegisQueue('aegisLedger', entry);
+    return null;
+  }
+  const row = {
+    tourist_id: entry.subjectId || entry.touristId || (entry.payload && entry.payload.touristId) || null,
+    seq: entry.seq,
+    entry_type: entry.type,
+    title: entry.title,
+    payload: entry.payload || {},
+    prev_hash: entry.prev,
+    entry_hash: entry.hash,
+    occurred_at: entry.ts
+  };
+  try {
+    const { data, error } = await sbClient.from('aegis_ledger').insert(row).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('aegis_ledger write skipped (run migration_v3.sql):', err && err.message);
+    if (enqueue) sbAegisQueue('aegisLedger', entry);
+    return null;
+  }
+}
+
+async function sbAegisCheckinInsert(row, enqueue = true) {
+  if (!sbClient || !isCloudConnected) {
+    if (enqueue) sbAegisQueue('aegisCheckin', row);
+    return null;
+  }
+  try {
+    const { data, error } = await sbClient.from('safety_checkins').insert(row).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('safety_checkins write skipped:', err && err.message);
+    if (enqueue) sbAegisQueue('aegisCheckin', row);
+    return null;
+  }
+}
+
+async function sbAegisTelemetryInsert(points, enqueue = true) {
+  const list = Array.isArray(points) ? points.slice(0, 25) : [points];
+  if (!sbClient || !isCloudConnected) {
+    if (enqueue) sbAegisQueue('aegisTelemetry', list);
+    return null;
+  }
+  const rows = list.map(p => ({
+    tourist_id: p.touristId || p.id || null,
+    latitude: Number(p.lat),
+    longitude: Number(p.lng),
+    accuracy: p.accuracy != null ? Number(p.accuracy) : null,
+    risk_score: p.risk != null ? Math.round(Number(p.risk)) : null,
+    zone: p.zone || null,
+    recorded_at: p.ts || new Date().toISOString()
+  })).filter(r => r.tourist_id && isFinite(r.latitude) && isFinite(r.longitude));
+  if (!rows.length) return null;
+  try {
+    const { data, error } = await sbClient.from('telemetry_breadcrumbs').insert(rows).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('telemetry_breadcrumbs write skipped:', err && err.message);
+    if (enqueue) sbAegisQueue('aegisTelemetry', list);
+    return null;
+  }
+}
+
+async function sbAegisAlertInsert(alert, enqueue = true) {
+  if (!sbClient || !isCloudConnected) {
+    if (enqueue) sbAegisQueue('aegisAlert', alert);
+    return null;
+  }
+  const row = {
+    id: alert.id,
+    title: alert.title,
+    category: alert.type || 'scam',
+    description: alert.desc || '',
+    latitude: alert.lat,
+    longitude: alert.lng,
+    upvotes: alert.upvotes || 0,
+    verified: !!alert.verified,
+    reported_by: alert.by || 'community',
+    status: alert.verified ? 'approved' : 'pending'
+  };
+  try {
+    const { data, error } = await sbClient.from('community_alerts').upsert(row, { onConflict: 'id' }).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('community_alerts write skipped:', err && err.message);
+    if (enqueue) sbAegisQueue('aegisAlert', alert);
+    return null;
+  }
+}
+
+async function sbAegisBroadcastInsert(record, enqueue = true) {
+  if (!sbClient || !isCloudConnected) {
+    if (enqueue) sbAegisQueue('aegisBroadcast', record);
+    return null;
+  }
+  try {
+    const { data, error } = await sbClient.from('broadcasts').insert({
+      id: record.id,
+      audience: record.audience,
+      severity: record.severity || 'info',
+      message: record.message,
+      recipients: record.recipients || 0,
+      sent_by: record.by || 'commander',
+      sent_at: record.sentAt || new Date().toISOString()
+    }).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('broadcasts write skipped:', err && err.message);
+    if (enqueue) sbAegisQueue('aegisBroadcast', record);
+    return null;
+  }
+}
+
+async function sbAegisSubscriptionUpsert(sub, enqueue = true) {
+  if (!sbClient || !isCloudConnected) {
+    if (enqueue) sbAegisQueue('aegisSubscription', sub);
+    return null;
+  }
+  const tourist = (typeof aegisSubject === 'function' && aegisSubject()) || {};
+  try {
+    const { data, error } = await sbClient.from('subscriptions').insert({
+      tourist_id: tourist.id || null,
+      plan: sub.plan,
+      billing_cycle: sub.cycle,
+      price: sub.price,
+      card_last4: sub.last4 || null,
+      seats: sub.seats || 1,
+      status: sub.status || 'active',
+      activated_at: sub.activatedAt,
+      renews_at: sub.renewsAt
+    }).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('subscriptions write skipped:', err && err.message);
+    if (enqueue) sbAegisQueue('aegisSubscription', sub);
+    return null;
+  }
+}
+
+// Best-effort mirror of Aegis telemetry into the existing tourists row.
+async function sbAegisTouristExtras(t) {
+  if (!sbClient || !isCloudConnected || !t || !t.id) return null;
+  try {
+    const { data, error } = await sbClient.from('tourists').update({
+      battery_level: AEG && AEG.battery ? AEG.battery.level : null,
+      network_status: (typeof aegisNetworkType === 'function') ? aegisNetworkType() : (S && S.net) || null,
+      plan_tier: AEG ? AEG.tier : 'free',
+      last_checkin_at: AEG && AEG.pulse && AEG.pulse.lastCheckin ? AEG.pulse.lastCheckin : null,
+      pulse_deadline: AEG && AEG.pulse && AEG.pulse.deadline ? new Date(AEG.pulse.deadline).toISOString() : null,
+      stealth_mode: !!(AEG && AEG.stealth && AEG.stealth.on)
+    }).eq('tourist_id', t.id).select();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    // Column may not exist until migration_v3.sql is applied — never fatal.
+    return null;
+  }
+}
+
+async function sbAegisFetchAlerts() {
+  if (!sbClient) return null;
+  try {
+    const { data, error } = await sbClient
+      .from('community_alerts')
+      .select('*')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    return (data || []).map(a => ({
+      id: a.id,
+      title: a.title,
+      desc: a.description || '',
+      type: a.category,
+      lat: Number(a.latitude),
+      lng: Number(a.longitude),
+      upvotes: a.upvotes || 0,
+      verified: !!a.verified,
+      by: a.reported_by || 'community',
+      ts: a.created_at
+    }));
+  } catch (err) {
+    console.warn('community_alerts read skipped:', err && err.message);
+    return null;
+  }
+}
+
+async function sbAegisFetchLedger(limit = 40) {
+  if (!sbClient) return null;
+  try {
+    const { data, error } = await sbClient
+      .from('aegis_ledger')
+      .select('*')
+      .order('seq', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map(e => ({
+      seq: e.seq,
+      type: e.entry_type,
+      title: e.title,
+      payload: e.payload || {},
+      prev: e.prev_hash,
+      hash: e.entry_hash,
+      ts: e.occurred_at
+    }));
+  } catch (err) {
+    console.warn('aegis_ledger read skipped:', err && err.message);
+    return null;
   }
 }

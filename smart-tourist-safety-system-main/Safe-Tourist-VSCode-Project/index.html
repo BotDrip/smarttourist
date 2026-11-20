@@ -1,135 +1,393 @@
 <!DOCTYPE html>
-
 <html lang="en">
-<head><link href="css/style.css?v=5.0" rel="stylesheet"/>
+<head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Smart Tourist Safety Monitoring and Incident Response System</title>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#090D16"/>
+<meta name="description" content="AegisTravel — tactical tourist safety command center: isolation-forest risk intelligence, dead-man safety pulse, cryptographic digital ID, tamper-proof incident ledger and parametric insurance certificates."/>
+<title>AegisTravel · SafeTourist Pro — Tactical Safety Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-
-<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
-<!-- Added Leaflet Control Geocoder CSS for Map Search -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+<link href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" rel="stylesheet"/>
+<link href="css/style.css?v=7.8" rel="stylesheet"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- Kinetic particle / glow cursor layer -->
+<canvas id="fxTrail" aria-hidden="true"></canvas>
+<div class="fx-halo" id="fxHalo" aria-hidden="true"></div>
+<div id="srLive" class="sr-only" aria-live="polite"></div>
+
+<!-- ============================ LANDING ============================ -->
 <div class="screen landing" id="landing">
-<nav class="landing-nav">
-<div class="brand">SMART TOURIST <small>SAFETY MONITORING &amp; INCIDENT RESPONSE</small></div>
-<button class="btn" onclick="showAuth('tourist')">Sign in</button>
-</nav>
-<section class="hero">
-<div>
-<div class="eyebrow">AI · Geo-Fencing · Digital ID · Rapid Response</div>
-<h1>Every step<br/>watched over.</h1>
-<p>An integrated tourist safety system combining AI-assisted incident analysis, real-time location monitoring, geo-fencing, emergency SOS, medical information and digital identity.</p>
-<div class="hero-actions">
-<button class="btn primary" onclick="showAuth('tourist')">Tourist access</button>
-<button class="btn" onclick="showAuth('authority')">Authority access</button>
+  <nav class="landing-nav">
+    <div class="brand">
+      <span class="brand-mark">Æ</span>
+      <span class="brandtext">AEGISTRAVEL<small>SAFETOURIST PRO · SAFETY OS</small></span>
+    </div>
+    <div class="nav-links">
+      <a href="#platform">Platform</a>
+      <a href="#command">Command Center</a>
+      <a href="#features">Capabilities</a>
+      <a href="#plans">Pricing</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-status"><i class="live-dot"></i> Grid online · <span id="landingLiveTime">ACTIVE · --:--:-- IST</span></span>
+      <button class="btn tiny" onclick="showAuth('tourist')">Sign in</button>
+      <button class="btn primary tiny" onclick="showAuth('authority')">Launch console</button>
+    </div>
+  </nav>
+
+  <section class="hero" id="platform">
+    <div>
+      <div class="eyebrow">Tactical travel safety operating system</div>
+      <h1>Every trip.<br/><span class="grad">Under watch.</span></h1>
+      <p class="lead">A command-grade safety layer for destinations, insurers and independent travelers. Isolation-forest anomaly detection, a dead-man safety pulse, cryptographic digital identity and an immutable incident ledger — in one live console.</p>
+      <div class="hero-actions">
+        <button class="btn primary" onclick="showAuth('tourist')">Tourist access →</button>
+        <button class="btn" onclick="showAuth('authority')">Command center</button>
+      </div>
+      <div class="hero-trust">
+        <span>SHA-256 evidence chain</span>
+        <span>Offline-first SOS beacon</span>
+        <span>Sub-60s dispatch SLA</span>
+      </div>
+    </div>
+
+    <div class="hero-stage">
+      <div class="stage-grid"></div>
+      <div class="stage-radar"><span class="radar-sweep"></span></div>
+      <svg class="stage-route" viewBox="0 0 500 460" preserveAspectRatio="none" aria-hidden="true">
+        <path class="route-base" d="M150 300 C 200 250, 235 210, 300 180 S 360 140, 390 300"/>
+        <path class="route-live" d="M150 300 C 200 250, 235 210, 300 180 S 360 140, 390 300"/>
+      </svg>
+      <span class="stage-node n1"></span>
+      <span class="stage-node n2"></span>
+      <span class="stage-node n3"></span>
+      <div class="stage-chip ca"><span>ISOLATION FOREST</span><b>0.91 <span class="down">anomaly</span></b><span>route deviation · 240 m</span></div>
+      <div class="stage-chip cb"><span>SAFETY PULSE</span><b class="mono">04:12</b><span>next check-in due</span></div>
+      <div class="stage-chip cc"><span>EVIDENCE LEDGER</span><b class="up">VERIFIED</b><span>8f3c…a92e · block #0142</span></div>
+      <div class="stage-chip cd"><span>DISPATCH SLA</span><b>38 s <span class="up">▲</span></b><span>unit MUM-04 en route</span></div>
+      <div class="scanline"></div>
+      <div class="stage-caption"><span>LIVE COMMAND PREVIEW</span><span>AREA 19.0760, 72.8777 · RISK 34</span></div>
+    </div>
+  </section>
+
+  <div class="ticker-strip">
+    <div class="ticker-track" id="landingTicker">
+      <span><i>●</i> <b>Gateway of India</b> geofence stable · 1,204 pings/min</span>
+      <span><i>▲</i> <b>Bhandardara</b> restricted perimeter · 2 breaches auto-resolved</span>
+      <span><i>◆</i> <b>Ledger</b> block #0141 sealed · SHA-256 chain intact</span>
+      <span><i>●</i> <b>Ajanta Caves</b> safe haven verified · police kiosk 90 m</span>
+      <span><i>▲</i> <b>Taxi overcharge</b> cluster reported · Colaba causeway</span>
+      <span><i>●</i> <b>Pulse</b> 312 solo trekkers checked in this hour</span>
+      <span><i>◆</i> <b>Parametric</b> claim auto-adjudicated in 12 s</span>
+      <span><i>●</i> <b>Gateway of India</b> geofence stable · 1,204 pings/min</span>
+      <span><i>▲</i> <b>Bhandardara</b> restricted perimeter · 2 breaches auto-resolved</span>
+      <span><i>◆</i> <b>Ledger</b> block #0141 sealed · SHA-256 chain intact</span>
+      <span><i>●</i> <b>Ajanta Caves</b> safe haven verified · police kiosk 90 m</span>
+      <span><i>▲</i> <b>Taxi overcharge</b> cluster reported · Colaba causeway</span>
+      <span><i>●</i> <b>Pulse</b> 312 solo trekkers checked in this hour</span>
+      <span><i>◆</i> <b>Parametric</b> claim auto-adjudicated in 12 s</span>
+    </div>
+  </div>
+
+  <section class="landing-section" id="command">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Split-pane command center</div>
+        <h2>One map. Every signal.</h2>
+      </div>
+      <p>Collapsible telemetry drawers surround the live map: anomaly feed, digital ID vault, AI safety copilot and incident dispatch — all updating in real time.</p>
+    </div>
+    <div class="metric-strip">
+      <div><b>42s</b><span>Median dispatch acknowledgment</span></div>
+      <div><b>99.98<i>%</i></b><span>Telemetry pipeline uptime</span></div>
+      <div><b>18<i> ms</i></b><span>Anomaly scoring latency</span></div>
+      <div><b>6<i> layers</i></b><span>Risk fusion per coordinate</span></div>
+    </div>
+    <div class="feature-grid" style="margin-top:16px">
+      <article class="feature-card">
+        <div class="feature-icon">⌖</div>
+        <h3>Live simulation &amp; replay</h3>
+        <p>Stress-test the platform in front of any stakeholder. Trigger transit, deviation or SOS scenarios and scrub through recorded movement history.</p>
+        <ul><li>Isolation-forest risk scoring</li><li>Trajectory divergence rendering</li><li>Frame-accurate playback scrubber</li></ul>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon">◇</div>
+        <h3>Cryptographic identity</h3>
+        <p>A holographic digital pass with rotating QR, SHA-256 profile hash and a tamper-evident black-box ledger insurers and police can verify.</p>
+        <ul><li>Chained evidence blocks</li><li>Blood group &amp; allergy badge</li><li>Offline verification payload</li></ul>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon">✦</div>
+        <h3>Contextual risk intelligence</h3>
+        <p>A 0–100 safety score fusing time of day, crowd density, geofence class, community scam reports and verified safe havens.</p>
+        <ul><li>Scam radar with community alerts</li><li>Dead-man safety pulse</li><li>Parametric claim certificates</li></ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="landing-section" id="features" style="padding-top:0">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Built for two buyers at once</div>
+        <h2>Consumer-grade care.<br/>Enterprise-grade command.</h2>
+      </div>
+      <p>Tourists get a personal safety companion. Hotels, embassies and insurers get a fleet console with SLA timers, heatmaps and bulk broadcast.</p>
+    </div>
+    <div class="metric-strip" style="grid-template-columns:repeat(3,1fr)">
+      <div><b>B2C</b><span>Solo traveler companion · pulse · ID vault</span></div>
+      <div><b>B2B</b><span>Fleet monitoring · SLA · heatmaps</span></div>
+      <div><b>B2B2C</b><span>Parametric insurance · embassy escalation</span></div>
+    </div>
+  </section>
+
+  <section class="landing-section" id="plans" style="padding-top:0">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Commercial architecture</div>
+        <h2>Plans that scale with risk.</h2>
+      </div>
+      <p>Feature-gated within the app. Upgrade flows include a live checkout simulation so the entire monetization journey is demonstrable.</p>
+    </div>
+    <div class="price-grid">
+      <article class="price-card">
+        <div class="kicker">Explorer</div>
+        <div class="price-tag">Free</div>
+        <div class="muted" style="font-size:12px">Core safety for every traveler</div>
+        <ul><li>Live map &amp; geofence alerts</li><li>1-tap SOS beacon</li><li>Digital ID + QR</li><li>Community scam radar</li></ul>
+        <button class="btn wide" onclick="showAuth('tourist')">Start free</button>
+      </article>
+      <article class="price-card featured">
+        <div class="kicker" style="color:var(--cyan)">Aegis Pro</div>
+        <div class="price-tag">$9<small>/month</small></div>
+        <div class="muted" style="font-size:12px">For solo travelers &amp; trekkers</div>
+        <ul><li>Dead-man safety pulse</li><li>Parametric instant payout</li><li>24/7 embassy escalation</li><li>Family / group mesh tracking</li><li>Verified incident certificates</li></ul>
+        <button class="btn primary wide" onclick="showAuth('tourist')">Go Pro</button>
+      </article>
+      <article class="price-card">
+        <div class="kicker">Enterprise</div>
+        <div class="price-tag">$349<small>/month</small></div>
+        <div class="muted" style="font-size:12px">Hotels, DMOs, embassies, insurers</div>
+        <ul><li>50+ tourist fleet console</li><li>SLA response timers</li><li>Heatmaps &amp; bulk broadcast</li><li>Tamper-proof evidence export</li><li>Multi-tenant seats</li></ul>
+        <button class="btn wide" onclick="showAuth('authority')">Request console</button>
+      </article>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <span>© 2026 AegisTravel Systems</span>
+    <span>Evidence chain · SHA-256 · Offline-first</span>
+    <span>Demo environment · simulation data</span>
+  </footer>
 </div>
-<div class="ticker">
-<div><b>03</b><span>Active zones</span></div>
-<div><b>LIVE</b><span>Location monitoring</span></div>
-<div><b>1-TAP</b><span>SOS alert</span></div>
-</div>
-</div>
-<div class="visual">
-<div class="mapgrid"></div>
-<div class="radar-face"><div class="radar-ring"><div class="radar-sweep"></div></div></div>
-<div class="zone"></div><div class="pin"></div>
-<div class="map-card top"><b style="font-size:13px">Current safety</b><div class="badge safe" style="margin-top:8px">Safe zone</div></div>
-<div class="map-card bottom"><small class="muted">Location monitoring</small><br/><b class="mono" id="landingLiveTime">ACTIVE · --:--:-- IST</b></div>
-</div>
-</section>
-</div>
+
+<!-- ============================ AUTH ============================ -->
 <div class="screen auth-wrap hidden" id="auth">
-<div class="auth-card">
-<button class="link" onclick="showLanding()">← Back</button>
-<div class="eyebrow" style="margin-top:22px">Secure access</div>
-<h2>Welcome back</h2><div class="muted" style="font-size:13px" id="authSubtitle">Sign in to the Safe Tourist network.</div>
-<div class="tabs"><button id="touristTab" onclick="setRole('tourist')">Tourist</button><button id="authorityTab" onclick="setRole('authority')">Authority</button></div>
-<form id="loginForm" novalidate="">
-<div class="field"><label>Email</label><input id="email" placeholder="you@example.com" type="text" autocomplete="email"/><div class="error" id="emailErr"></div></div>
-<div class="field"><label>Password</label>
-  <div class="password-row">
-    <input id="password" placeholder="Enter password" type="password" autocomplete="current-password"/>
-    <button class="password-toggle-btn" id="passwordToggle" onclick="togglePassword('password','passwordToggle')" type="button" title="Toggle password visibility">👁️</button>
+  <div class="auth-card">
+    <button class="link" onclick="showLanding()" style="font-size:12px">← Back</button>
+    <div class="auth-logo" style="margin-top:18px"><span class="brand-mark" style="width:24px;height:24px;font-size:12px">Æ</span> AEGISTRAVEL SECURE ACCESS</div>
+    <div class="eyebrow no-rule">Authenticated entry point</div>
+    <h2>Welcome back</h2>
+    <div class="muted" style="font-size:12.5px" id="authSubtitle">Sign in to the Safe Tourist network.</div>
+    <div class="tabs">
+      <button id="touristTab" onclick="setRole('tourist')">Tourist</button>
+      <button id="authorityTab" onclick="setRole('authority')">Authority</button>
+    </div>
+    <form id="loginForm" novalidate>
+      <div class="field"><label>Email</label><input id="email" placeholder="you@example.com" type="text" autocomplete="email"/><div class="error" id="emailErr"></div></div>
+      <div class="field">
+        <label>Password</label>
+        <div class="password-row">
+          <input id="password" placeholder="Enter password" type="password" autocomplete="current-password"/>
+          <button class="password-toggle-btn" id="passwordToggle" onclick="togglePassword('password','passwordToggle')" type="button" title="Toggle password visibility">👁</button>
+        </div>
+        <div class="error" id="passErr"></div>
+        <div style="display:flex;justify-content:flex-end"><button class="link" onclick="forgotPassword()" style="margin-top:6px;font-size:11.5px" type="button">Forgot password?</button></div>
+      </div>
+      <div class="error" id="authGeneralErr" style="margin-bottom:8px"></div>
+      <button class="btn primary wide" id="loginBtn" type="submit">Sign in →</button>
+      <div id="guestRow" style="margin-top:8px"><button class="btn wide" type="button" onclick="loginGuest()">Explore console as guest</button></div>
+    </form>
+    <div class="auth-foot" id="authFoot">New tourist? <button class="link" onclick="showRegister()">Create account</button></div>
+    <div class="auth-secure"><span>◆ SHA-256 credentials</span><span>◆ RLS enforced</span><span>◆ Session isolated</span></div>
   </div>
-  <div class="error" id="passErr"></div>
-  <div style="display:flex;justify-content:flex-end"><button class="link" onclick="forgotPassword()" style="margin-top:7px;font-size:12px" type="button">Forgot password?</button></div>
 </div>
-<div class="error" id="authGeneralErr" style="margin-bottom:8px"></div>
-<button class="btn primary" id="loginBtn" type="submit" style="width:100%;margin-top:4px">Sign in</button>
-<div id="guestRow" style="margin-top:8px"><button class="btn" type="button" onclick="loginGuest()" style="width:100%">Explore as Guest</button></div>
-</form>
-<div class="auth-foot" id="authFoot">New tourist? <button class="link" onclick="showRegister()">Create account</button></div>
-</div>
-</div>
+
 <div class="screen auth-wrap hidden" id="register">
-<div class="auth-card">
-<button class="link" onclick="showAuth('tourist')">← Back to sign in</button>
-<div class="eyebrow" style="margin-top:22px">Tourist registration</div><h2>Create profile</h2><div class="muted" style="font-size:13px">Streamlined registration with Digital ID generation.</div>
-<form id="registerForm" novalidate="">
-<div class="field"><label>Full name</label><input id="rname" placeholder="Enter your full name"/><div class="error" id="rnameErr"></div></div>
-<div class="field"><label>Email</label><input id="remail" placeholder="you@example.com" type="text"/><div class="error" id="remailErr"></div></div>
-<div class="field"><label>Mobile number</label><input id="rphone" placeholder="10-digit number" type="tel"/><div class="error" id="rphoneErr"></div></div>
-<div class="field"><label>Family / emergency contact name</label><input id="rfamilyName" placeholder="Optional"/></div>
-<div class="field"><label>Family / emergency contact number</label><input id="rfamilyPhone" placeholder="Optional 10-digit number" type="tel"/><div class="error" id="rfamilyPhoneErr"></div></div>
-<div class="field"><label>Password</label>
-  <div class="password-row">
-    <input id="rpass" placeholder="Minimum 8 characters" type="password" oninput="onRegisterPassInput()"/>
-    <button class="password-toggle-btn" id="rpassToggle" onclick="togglePassword('rpass','rpassToggle')" type="button" title="Toggle password visibility">👁️</button>
+  <div class="auth-card">
+    <button class="link" onclick="showAuth('tourist')" style="font-size:12px">← Back to sign in</button>
+    <div class="auth-logo" style="margin-top:18px"><span class="brand-mark" style="width:24px;height:24px;font-size:12px">Æ</span> ISSUE DIGITAL TOURIST ID</div>
+    <div class="eyebrow no-rule">Tourist registration</div><h2>Create profile</h2>
+    <div class="muted" style="font-size:12.5px">Streamlined registration with Digital ID generation.</div>
+    <form id="registerForm" novalidate>
+      <div class="field"><label>Full name</label><input id="rname" placeholder="Enter your full name"/><div class="error" id="rnameErr"></div></div>
+      <div class="field"><label>Email</label><input id="remail" placeholder="you@example.com" type="text"/><div class="error" id="remailErr"></div></div>
+      <div class="field"><label>Mobile number</label><input id="rphone" placeholder="10-digit number" type="tel"/><div class="error" id="rphoneErr"></div></div>
+      <div class="field"><label>Family / emergency contact name</label><input id="rfamilyName" placeholder="Optional"/></div>
+      <div class="field"><label>Family / emergency contact number</label><input id="rfamilyPhone" placeholder="Optional 10-digit number" type="tel"/><div class="error" id="rfamilyPhoneErr"></div></div>
+      <div class="field">
+        <label>Password</label>
+        <div class="password-row">
+          <input id="rpass" placeholder="Minimum 8 characters" type="password" oninput="onRegisterPassInput()"/>
+          <button class="password-toggle-btn" id="rpassToggle" onclick="togglePassword('rpass','rpassToggle')" type="button" title="Toggle password visibility">👁</button>
+        </div>
+        <div class="pw-strength-wrap" id="pwStrengthMeter" style="display:none">
+          <div class="pw-strength-track"><div class="pw-strength-bar" id="pwStrengthBar"></div></div>
+          <div class="pw-strength-meta"><span>Requires 8+ characters, letters &amp; numbers</span><b id="pwStrengthLabel">Weak</b></div>
+        </div>
+        <div class="error" id="rpassErr"></div>
+      </div>
+      <div class="field">
+        <label>Confirm password</label>
+        <div class="password-row">
+          <input id="rconfirm" placeholder="Re-enter password" type="password"/>
+          <button class="password-toggle-btn" id="rconfirmToggle" onclick="togglePassword('rconfirm','rconfirmToggle')" type="button" title="Toggle password visibility">👁</button>
+        </div>
+        <div class="error" id="rconfirmErr"></div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Blood group</label><select id="blood"><option>O+</option><option>A+</option><option>B+</option><option>AB+</option><option>O-</option><option>A-</option><option>B-</option><option>AB-</option></select></div>
+        <div class="field"><label>Allergies</label><input id="allergy" placeholder="None / list allergies"/></div>
+      </div>
+      <button class="btn primary wide" id="registerBtn" type="submit">Create tourist profile</button>
+    </form>
   </div>
-  <div class="pw-strength-wrap" id="pwStrengthMeter" style="display:none">
-    <div class="pw-strength-track"><div class="pw-strength-bar" id="pwStrengthBar"></div></div>
-    <div class="pw-strength-meta"><span>Requires 8+ characters, letters &amp; numbers</span><b id="pwStrengthLabel">Weak</b></div>
-  </div>
-  <div class="error" id="rpassErr"></div>
 </div>
-<div class="field"><label>Confirm password</label>
-  <div class="password-row">
-    <input id="rconfirm" placeholder="Re-enter password" type="password"/>
-    <button class="password-toggle-btn" id="rconfirmToggle" onclick="togglePassword('rconfirm','rconfirmToggle')" type="button" title="Toggle password visibility">👁️</button>
-  </div>
-  <div class="error" id="rconfirmErr"></div>
-</div>
-<div class="field"><label>Blood group</label><select id="blood"><option>O+</option><option>A+</option><option>B+</option><option>AB+</option><option>O-</option><option>A-</option><option>B-</option><option>AB-</option></select></div>
-<div class="field"><label>Allergies</label><input id="allergy" placeholder="None / list allergies"/></div>
-<button class="btn primary" id="registerBtn" type="submit" style="width:100%">Create tourist profile</button>
-</form>
-</div>
-</div>
+
+<!-- ============================ APP ============================ -->
 <div class="app hidden" id="app">
-<aside class="sidebar">
-<div class="side-brand">SMART TOURIST<span>SAFETY OPS</span></div>
-<div class="nav" id="nav"></div>
-<div class="side-bottom"><button class="nav" onclick="logout()" style="width:100%;border:0;background:transparent;color:var(--muted);text-align:left;padding:11px 12px;border-radius:9px">↪ Logout</button></div>
-</aside>
-<main class="main">
-<div class="topbar">
-  <div><div class="eyebrow" id="roleLabel"></div><h1 id="pageTitle">Overview</h1></div>
-  <div class="profile-pill">
-    <span class="clock" id="liveClock"></span>
-    <button class="btn theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">☾</button>
-    <div><b id="userName">Aditya Sanap</b><small class="muted" id="userRole" style="display:block;text-align:right">Tourist</small></div>
-    <div class="avatar" id="avatar">AS</div>
+  <aside class="sidebar">
+    <div class="side-brand">
+      <span class="brand-mark">Æ</span>
+      <span class="brandtext">AEGISTRAVEL<span>SAFETY OPERATIONS</span></span>
+    </div>
+    <div class="side-mode"><span>MODE</span><b id="sideMode">TOURIST</b></div>
+    <div class="nav" id="nav"></div>
+    <div class="side-bottom">
+      <div class="side-cta" id="sideUpgrade">
+        <h4>Unlock Aegis Pro</h4>
+        <p>Parametric payout, embassy escalation, group mesh.</p>
+        <button class="btn primary tiny wide" onclick="aegisOpenPricing()">Upgrade</button>
+      </div>
+      <button class="nav" onclick="aegisOpenSettings()" style="width:100%"><span class="ni">⚙</span><span class="label">Settings &amp; data</span></button>
+      <button class="nav" onclick="logout()" style="width:100%;color:var(--muted)"><span class="ni">↪</span><span class="label">Sign out</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div style="min-width:0">
+          <div class="topbar-sub" id="roleLabel">Tourist portal</div>
+          <h1 id="pageTitle">Command Center</h1>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="role-switch" title="Switch tenant role (demo)">
+          <button id="roleTouristBtn" onclick="aegisSwitchRole('tourist')">Tourist</button>
+          <button id="roleCommandBtn" onclick="aegisSwitchRole('authority')">Command</button>
+        </div>
+        <button class="tier-badge" id="tierPill" onclick="aegisOpenPricing()" title="Manage plan">FREE</button>
+        <span class="clock mono" id="liveClock">--:--:--</span>
+        <button class="btn ghost-toggle" id="liteToggle" onclick="aegisToggleLite()" title="Toggle Lite Mode (disables particles and glow)" aria-pressed="false">◌ Lite</button>
+        <button class="btn theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle day / night operations">☾</button>
+        <button class="sos-quick" onclick="aegisPanic()" title="Emergency SOS (Shift+S)">◉ SOS</button>
+        <div class="profile-pill">
+          <div style="text-align:right"><b id="userName" style="font-size:12px;display:block">Aditya Sanap</b><small class="muted" id="userRole" style="display:block;font-size:10px">Tourist</small></div>
+          <div class="avatar" id="avatar">AS</div>
+        </div>
+      </div>
+    </header>
+
+    <div id="content"></div>
+
+    <footer class="hud-statusbar">
+      <span>NODE <b id="sbNode">MUM-01</b></span>
+      <span class="sep"></span>
+      <span>LINK <b id="sbCloud">LOCAL</b></span>
+      <span class="sep"></span>
+      <span>BATTERY <b id="sbBattery">—</b></span>
+      <span class="sep"></span>
+      <span>NET <b id="sbNet">ONLINE</b></span>
+      <span class="sep"></span>
+      <span>RISK <b id="sbRisk">—</b></span>
+      <span class="sep"></span>
+      <span>LEDGER <b id="sbLedger">0 BLOCKS</b></span>
+      <span class="sep"></span>
+      <span>PULSE <b id="sbPulse">STANDBY</b></span>
+      <span class="spacer"></span>
+      <span id="sbStealth">STEALTH OFF</span>
+      <span class="sep"></span>
+      <span>AEGIS v6.0</span>
+    </footer>
+  </main>
+</div>
+
+<!-- ============================ OVERLAYS ============================ -->
+<div class="stealth-chip" onclick="aegisToggleStealth()">◐ Stealth · low power <b>ON</b></div>
+
+<div class="sos-overlay" id="sosOverlay" role="alertdialog" aria-modal="true" aria-label="Emergency SOS active">
+  <div class="sos-panel">
+    <div class="kicker" style="color:#FF9DB4">TIER-1 EMERGENCY BROADCAST</div>
+    <div class="big">SOS ACTIVE</div>
+    <div class="sub" id="sosOverlaySub">Responders notified · evidence sealed</div>
+    <div class="sos-steps" id="sosOverlaySteps"></div>
+    <div class="sos-code"><span id="sosOverlayCoords">19.076000, 72.877700</span><span id="sosOverlayHash">HASH ········</span></div>
+    <div class="actions" style="margin-top:16px">
+      <button class="btn" onclick="aegisCloseSOSOverlay()">Minimize alert</button>
+      <button class="btn danger" onclick="aegisCancelSOS()">Cancel false alarm</button>
+    </div>
+    <div class="sub" style="margin-top:12px;opacity:.7">Broadcast continues in background until cancelled</div>
   </div>
 </div>
-<div id="content"></div>
-</main>
+
+<div class="decoy" id="decoyScreen">
+  <div class="decoy-top"><span>Calculator</span><span id="decoyClock">--:--</span></div>
+  <div class="decoy-calc">
+    <div class="decoy-screen" id="decoyDisplay">0</div>
+    <div class="decoy-keys" id="decoyKeys">
+      <button onclick="aegisDecoyPress('C')" class="op">AC</button>
+      <button onclick="aegisDecoyPress('±')" class="op">±</button>
+      <button onclick="aegisDecoyPress('%')" class="op">%</button>
+      <button onclick="aegisDecoyPress('/')" class="op">÷</button>
+      <button onclick="aegisDecoyPress('7')">7</button>
+      <button onclick="aegisDecoyPress('8')">8</button>
+      <button onclick="aegisDecoyPress('9')">9</button>
+      <button onclick="aegisDecoyPress('*')" class="op">×</button>
+      <button onclick="aegisDecoyPress('4')">4</button>
+      <button onclick="aegisDecoyPress('5')">5</button>
+      <button onclick="aegisDecoyPress('6')">6</button>
+      <button onclick="aegisDecoyPress('-')" class="op">−</button>
+      <button onclick="aegisDecoyPress('1')">1</button>
+      <button onclick="aegisDecoyPress('2')">2</button>
+      <button onclick="aegisDecoyPress('3')">3</button>
+      <button onclick="aegisDecoyPress('+')" class="op">+</button>
+      <button onclick="aegisDecoyPress('0')" class="zero">0</button>
+      <button onclick="aegisDecoyPress('.')">.</button>
+      <button onclick="aegisDecoyPress('=')" class="eq">=</button>
+    </div>
+    <div class="decoy-hint">tap the display 3× then long-press = to exit</div>
+  </div>
 </div>
+
 <div class="modal-back hidden" id="modalBack"><div class="modal" id="modal"></div></div>
 <div class="toast hidden" id="toast"></div>
 
-<script src="js/supabase.js?v=5.2"></script>
-<script src="js/app.js?v=5.2"></script>
-
-<!-- Added Leaflet Control Geocoder JS for Map Search -->
+<script src="js/supabase.js?v=7.8"></script>
+<script src="js/mlRiskEngine.js?v=7.8"></script>
+<script src="js/app.js?v=7.8"></script>
+<script src="js/aegis-core.js?v=7.8"></script>
+<script src="js/aegis-sim.js?v=7.8"></script>
+<script src="js/aegis-ui.js?v=7.8"></script>
+<script src="js/aegis-saas.js?v=7.8"></script>
+<script src="js/aegis-kinetic.js?v=7.8"></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 </body>
 </html>
